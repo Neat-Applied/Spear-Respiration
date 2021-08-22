@@ -11,40 +11,38 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.IO;
 using System.Windows.Forms.DataVisualization.Charting;
+using System.Threading;
 
 namespace MeasurmentComputingAcc
 {
-    public struct data {
-        public short value { get; set; }
-        public short digital { get; set; }
-    }
-
     public partial class Form1 : Form
     {
         string fileName = "Log.csv";
         StreamWriter write;
 
-        private const int AVERAGE = 20;
-        private const int DIFFERENTIAL = 10;
+        private const int AVERAGE = 40;
+        private const int DIFFERENTIAL = 20;
         private MccDaq.MccBoard DaqBoard;
-        private short xValueAnalog, yValueAnalog, zValueAnalog, vValueAnalog;
+        private short xValueAnalog, yValueAnalog, zValueAnalog, vValueAnalog, pValueAnalog; // v is combine vector, p is pressure value
         private short[] zValueAnalogArr;            // Use to hold previous results in order to calculate differencial
         private short zValueAnalogArrIndex;
-        private short zMax, zMaxTemp, zMin, zMinTemp, zRange;
+        private short zMax, zMaxTemp, zMin, zMinTemp, zRange, zRangePrev;
         private bool zSlope;
         private short newMax, newMin;
         private short[] zValueAnalogAverageArr;
+        
+        // Variables, array and list for dynamic plot of data
+        private short[] zGarr;
+        private short zGindex;
+        private Int32 zGarrSum;
+        private short zG;
+        private List<short> zGlist = new List<short>();
+        //plotStruct plotVar;
+
         private short zValueAnalogAverage;
         private int zValueAnalogSum;
         private short averageIndex;
-        private short[] zValueAnalogArr_Log;
-        private short[] zMAxArr_Log;
-        private short[] zMaxTempArr_Log;
-        private short[] zMinArr_Log;
-        private short[] zMinTempArr_Log;
         private short zIO_Log;                  // State of output IO
-        private short[] zIOarr_Log;
-        private short arrayIndex_Log;
         private const short LOW  = 7000;
         private const short MIDDLE = 7500;
         private const short HIGH = 8000;
@@ -52,15 +50,14 @@ namespace MeasurmentComputingAcc
         private float breathTime, previousBreadTime;                   // Count number of 100ms ticks between picks
         private short nextBreath;                   // Number of time ticks until next Exhaust
         private short counter;                      // Prevent quick transactions
-        private const short transactionDelay = 0;   // Number of minimum cycles between transactions
+        private short transactionDelay = 0;   // Number of minimum cycles between transactions
 
-        private short plotPoints = 0;                   // Number of points in chart
-        private const short NUM_OF_POINTS = 1000;   // Total number of points in chart
+        private const short NUM_OF_POINTS = 500;   // Total number of points in chart
         private bool pauseGraphFlag = false;
         private bool enableValve = false;
         private bool startMeasure = false;
 
-        data[] dataStruct;
+        private const short GAVE = 300;
 
         private void pauseGraph_Click(object sender, EventArgs e)
         {
@@ -111,20 +108,8 @@ namespace MeasurmentComputingAcc
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            dataStruct = new data[10000];
-            //dataBindingSource.DataSource = new List<data>();
-            //cartesianChart1.AxisX.Add(new LiveCharts.Wpf.Axis
-            //{
-            //    Title = "Seconds",
-            //    Labels = new[] { " " }
-            //});
-            //cartesianChart1.AxisY.Add(new LiveCharts.Wpf.Axis
-            //{
-            //    Title = "miliVolts",
-            //    Labels = new[] {"one", "two"},
-            //    LabelFormatter = value => value.ToString("C")
-            //});
-            //cartesianChart1.LegendLocation = LiveCharts.LegendLocation.Right;
+            chart1.Series["Respiration"].BorderWidth = 3;
+            chart1.Series["Vaccum"].BorderWidth = 3;
         }
 
         public Form1()
@@ -132,7 +117,8 @@ namespace MeasurmentComputingAcc
             InitializeComponent();
 
             zRange = 25;
-            
+            zRangePrev = 25;
+
             zMax = 0;
             zMaxTemp = 0;
             newMax = 1;
@@ -147,41 +133,38 @@ namespace MeasurmentComputingAcc
             counter = 0;
             nextBreath = 0;
 
-            DaqBoard = new MccDaq.MccBoard(0);
+            DaqBoard = new MccDaq.MccBoard(1);
 
             zValueAnalogArr = new short[DIFFERENTIAL];
             zValueAnalogArrIndex = 0;
 
-            zValueAnalogArr_Log = new short[10000];
-            zMAxArr_Log = new short[10000];
-            zMaxTempArr_Log = new short[10000];
-            zMinArr_Log = new short[10000];
-            zMinTempArr_Log = new short[10000];
-            zIOarr_Log = new short[10000];
             zIO_Log = 0; 
-            arrayIndex_Log = 0;
             
             zValueAnalogAverageArr = new short[AVERAGE];
             averageIndex = 0;
 
+            transactionDelay = (short)(00 / timer1.Interval);  // Delay of 200 ms
+
+            //plotVar = new plotStruct();
+            zGarr = new short[GAVE];
+
             try
             {
-                //if (File.Exists(fileName))
-                //{
+                if (File.Exists(fileName))
+                {
                     write = new StreamWriter(fileName, false);
-                    write.Write("Zvalue" + "\t" + "Max" + "\t" + "Min" + "\t" + zRange + "\t" + "IO" + "\n");
-                //}
+                    write.Write("Zvalue" + "\t" + "Max" + "\t" + "Min" + "\t" + "zRange" + "\t" + "zRangePrev" + "\t" + "IO" + "\n");
+                }
             }
             catch (Exception ex)
             { }
 
             DaqBoard.DConfigPort(MccDaq.DigitalPortType.AuxPort, MccDaq.DigitalPortDirection.DigitalOut);
-            //variable = new LineSeries() { Values = V };
-
+            
             timer2.Start();
         }
 
-        private void enValve_Click(object sender, EventArgs e)
+       private void enValve_Click(object sender, EventArgs e)
         {
             if (enableValve == false)
             {
@@ -208,7 +191,7 @@ namespace MeasurmentComputingAcc
                 button1.Text = "Start measuring";
                 startMeasure = false;
                 timer1.Stop();
-                //write.Close();
+                // write.Close();
             }
         }
 
@@ -225,19 +208,25 @@ namespace MeasurmentComputingAcc
 
             breathTime++;
             counter++;
-
+            
             DaqBoard.AIn(0, MccDaq.Range.Bip10Volts, out xValueAnalog);
             DaqBoard.AIn(1, MccDaq.Range.Bip10Volts, out yValueAnalog);
-            DaqBoard.AIn(2, MccDaq.Range.Bip10Volts, out zValueAnalog);
-            
+            DaqBoard.AIn(4, MccDaq.Range.Bip10Volts, out zValueAnalog);
+
+            DaqBoard.AIn(3, MccDaq.Range.Bip10Volts, out pValueAnalog);
+
             xValueAnalog -= 32767;
             yValueAnalog -= 32767;
-            zValueAnalog -= 32767;
+            zValueAnalog = (short)(zValueAnalog & 0x7FFF);
+            pValueAnalog = (short)(pValueAnalog & 0x7FFF);      // Pressure / Vacuum values
 
-            vValueAnalog = (short)Math.Sqrt(xValueAnalog * xValueAnalog + yValueAnalog * yValueAnalog + zValueAnalog * zValueAnalog);
+            vValueAnalog = (short)Math.Sqrt(xValueAnalog * xValueAnalog + yValueAnalog * yValueAnalog + zValueAnalog * zValueAnalog);   // Combined vector
             vValue.Text = vValueAnalog.ToString();
-
-            zValueAnalog *= 2;
+            
+            // Decrease DC values in order to focuse on the signal
+            //zValueAnalog -= 1000;
+            //zValueAnalog *= 8;
+            //zValueAnalog -= 10000;
 
             // Manage average index
             if (averageIndex == AVERAGE)
@@ -252,44 +241,48 @@ namespace MeasurmentComputingAcc
             }
             zValueAnalogAverage = (short)(zValueAnalogSum / AVERAGE);
 
-            // Calculate Min Max and Range of previoous breath
+            zValueAnalogAverage -= 1000;
+            zValueAnalogAverage *= 8;
+            zValueAnalogAverage -= 10000;
+
+            // Calculating DC and manage MIN MAX list for graph automatic axis update
+            CalculateDC();
+            
+            // Search minimum and maximum from actual signal
             SearchMinMax();
-            if ((nextBreath != 0) && ((breathTime + nextBreath) > previousBreadTime))
-            {
-                zIO_Log = HIGH;
-                if (enableValve == true)
-                {
-                    ExHale();
-                }
-            }
+            
             // Toggle output, verify not to fast
-            else if ((counter > transactionDelay) && (zRange > 50))
+            if ((counter > transactionDelay) /*&& (zRange > 50)*/)      // Option to block to fast transactions, e.g set as 20 for 200ms delay
             {
                 counter = 0;
-                if ((chbConst.Checked == true) && (zValueAnalogAverage < (zValueAnalogArr[DIFFERENTIAL - 1] - delta)) ||
+
+                // Use one of the 3 algorithem options
+                if (((chbConst.Checked == true) && (zValueAnalogAverage < (zValueAnalogArr[DIFFERENTIAL - 1] - delta)) &&  // Compare present value to 3 different early values, improve stability
+                    (zValueAnalogAverage < (zValueAnalogArr[(DIFFERENTIAL / 2) - 1] - delta)) &&
+                    (zValueAnalogAverage < (zValueAnalogArr[(DIFFERENTIAL - 5) - 1] - delta))) ||
                 ((chbManual.Checked == true) && (zValueAnalogAverage < (Convert.ToInt32(txtMiddle.Text) + Convert.ToInt32(txtRange.Text)))) ||
                 ((chbMeasure.Checked == true) && (zSlope == false) /* (zValueAnalogAverage < (zMax - (zRange / 4))) */ ))
                 {
                     zIO_Log = LOW;
                     InHale();
                 }
-                else if ((chbConst.Checked == true) && (zValueAnalogAverage > (zValueAnalogArr[DIFFERENTIAL - 1] + delta)) ||
-                        (chbManual.Checked == true) ||
-                        ((chbMeasure.Checked == true) && (zSlope == true) /* (zValueAnalogAverage > (zMin + (zRange / 4))) */ ))
+                else if (((chbConst.Checked == true) && (zValueAnalogAverage > (zValueAnalogArr[DIFFERENTIAL - 1] + delta)) &&   // Compare present value to 3 different early values, improve stability
+                    (zValueAnalogAverage > (zValueAnalogArr[(DIFFERENTIAL / 2) - 1] + delta)) &&
+                    (zValueAnalogAverage > (zValueAnalogArr[(DIFFERENTIAL - 5) - 1] + delta))) ||
+                (chbManual.Checked == true) ||
+                ((chbMeasure.Checked == true) && (zSlope == true) /* (zValueAnalogAverage > (zMin + (zRange / 4))) */ ))
                 {
                     if (zRange > 20)
                     {
                         zIO_Log = HIGH;
-                        if (enableValve == true)
-                        {
-                            ExHale();
-                        }
+                        ExHale();
                     }
                 }
             }
             
             LogValues();
 
+            // Manage array of values in order to calculate derivative and slop
             if (zValueAnalogArrIndex == DIFFERENTIAL)
                 zValueAnalogArrIndex = 0;
             zValueAnalogArr[zValueAnalogArrIndex++] = zValueAnalogAverage;
@@ -297,13 +290,13 @@ namespace MeasurmentComputingAcc
             xValue.Text = Convert.ToString(xValueAnalog);
             yValue.Text = Convert.ToString(yValueAnalog);
             zValue.Text = Convert.ToString(zValueAnalogAverage);
-
+            
             Plot();
         }
 
         private void InHale()
         {
-            DaqBoard.DOut(MccDaq.DigitalPortType.AuxPort, 0xffff);
+            DaqBoard.DOut(MccDaq.DigitalPortType.AuxPort, 0x0000);
             status.BackColor = Color.Green;
             txtBreath.Text = "Inhale";
             timer2.Stop();
@@ -312,7 +305,10 @@ namespace MeasurmentComputingAcc
 
         private void ExHale()
         {
-            DaqBoard.DOut(MccDaq.DigitalPortType.AuxPort, 0x0000);
+            if (enableValve == true)
+            {
+                DaqBoard.DOut(MccDaq.DigitalPortType.AuxPort, 0xFFFF);
+            }
             status.BackColor = Color.Red;
             txtBreath.Text = "Exhale";
             timer2.Start();
@@ -326,10 +322,9 @@ namespace MeasurmentComputingAcc
                 zMaxTemp = zValueAnalogAverage;
             }
 
-            if (zValueAnalogAverage < (zMaxTemp - (zRange / 4) ))
+            if ((zValueAnalogAverage < (zMaxTemp - (zRange / 4) )) /* && (newMax == 1)*/)
             {
                 zSlope = false;
-                breathTime = 0;
                 newMin = 1;
                 newMax = 0;
                 zMax = zMaxTemp;
@@ -338,6 +333,12 @@ namespace MeasurmentComputingAcc
                 if ((zMax - zMin) > 0)
                 {
                     zRange = (short)(zMax - zMin);
+
+                    // Prevent dramatic changes in Range, disregard single big changes (becasue it prevents detecting next MIN or MAX)
+                    if ((zRange > (zRangePrev << 2)) || (zRange < 25))
+                        zRange = zRangePrev;
+                    else
+                        zRangePrev = zRange;
                 }
                 else
                     zRange = 0;
@@ -348,7 +349,7 @@ namespace MeasurmentComputingAcc
                 zMinTemp = zValueAnalogAverage;
             }
 
-            if (zValueAnalogAverage > (zMinTemp + (zRange / 4) ))
+            if ((zValueAnalogAverage > (zMinTemp + (zRange / 4) ))/* && (newMin == 1)*/)
             {
                 // Time of previous breath
                 previousBreadTime = breathTime;         // In timer ticks
@@ -359,6 +360,7 @@ namespace MeasurmentComputingAcc
                 if (breathTime != 0)
                     txtBinS.Text = ((short)(60 / breathTime)).ToString();
 
+                breathTime = 0;
                 zSlope = true;
                 newMax = 1;
                 newMin = 0;
@@ -368,6 +370,11 @@ namespace MeasurmentComputingAcc
                 if ((zMax - zMin) > 0)
                 {
                     zRange = (short)(zMax - zMin);
+                    // Prevent dramatic changes in Range, disregard single big changes (becasue it prevents detecting next MIN or MAX)
+                    if ((zRange > (zRangePrev << 2)) || (zRange < 25))
+                        zRange = zRangePrev;
+                    else
+                        zRangePrev = zRange;
                 }
                 else
                     zRange = 0;
@@ -381,61 +388,100 @@ namespace MeasurmentComputingAcc
             txtActualRange.Text = zRange.ToString();
         }
 
+        // Calculating DC and MIN MAX manage list for graph automatic axis update
+        public void CalculateDC()
+        {
+            if (zGindex == 300)
+                zGindex = 0;
+            short listIndex = 0;
+            
+            zGarr[zGindex++] = zValueAnalogAverage;
+
+            // Only if graph is active
+            if (pauseGraphFlag == false)
+            {
+                // Search the items list for location of next element 
+                while ((zGlist.Count > 0) && (listIndex < zGlist.Count) && (zValueAnalogAverage > zGlist[listIndex])) // Verify the list not empty + search for list item bigger then last measurement
+                {
+                    if (listIndex >= zGlist.Count)
+                    {
+                        break;
+                    }
+                    listIndex++;
+                }
+                zGlist.Insert(listIndex, zValueAnalogAverage);
+            }
+            zGarrSum = 0;
+            for (int i = 0; i < GAVE; i++)
+            {
+                zGarrSum += zGarr[i];
+            }
+            zG = (short)(zGarrSum / GAVE);
+        }
+
         private void LogValues()
         {
             //dataStruct[arrayIndex++].value = zValueAnalogAverage;
             if (write != null)
             {
                 //write.Write(zValueAnalogAverage + "\t" + zMax + "\t" + zMaxTemp + "\t" + zMin + "\t" + zMinTemp + "\t" + zIO + "\n");
-                write.Write(zValueAnalogAverage + "\t" + zMax + "\t" + zMin + "\t" + zRange + "\t" + zIO_Log + "\n");
+                write.Write(zValueAnalogAverage + "\t" + zMax + "\t" + zMin + "\t" + zRange + "\t" + zRangePrev + "\t" + zIO_Log + "\n");
             }
 
-            if (arrayIndex_Log < 10000)
-            {
-                zMAxArr_Log[arrayIndex_Log] = zMax;
-                zMaxTempArr_Log[arrayIndex_Log] = zMaxTemp;
-                zMinArr_Log[arrayIndex_Log] = zMin;
-                zMinTempArr_Log[arrayIndex_Log] = zMinTemp;
-                zIOarr_Log[arrayIndex_Log] = zIO_Log;
-                zValueAnalogArr_Log[arrayIndex_Log++] = zValueAnalogAverage;
-            }
+            //// Logging into array
+            //if (arrayIndex_Log < 10000)
+            //{
+            //    zMAxArr_Log[arrayIndex_Log] = zMax;
+            //    zMaxTempArr_Log[arrayIndex_Log] = zMaxTemp;
+            //    zMinArr_Log[arrayIndex_Log] = zMin;
+            //    zMinTempArr_Log[arrayIndex_Log] = zMinTemp;
+            //    zIOarr_Log[arrayIndex_Log] = zIO_Log;
+            //    zValueAnalogArr_Log[arrayIndex_Log++] = zValueAnalogAverage;
+            //}
         }
         
         private void Plot()
         {
+            short listIndex = 0;
             if (pauseGraphFlag == false)        // Continue to add point to graph
             {
                 chart1.Series["Respiration"].Points.Add(zValueAnalogAverage);
+                chart1.Series["Vaccum"].Points.Add(pValueAnalog);
+                if (zIO_Log == HIGH)
+                   chart1.Series["Respiration"].Points[chart1.Series["Respiration"].Points.Count()-1].Color = Color.Red;
+                else if (zIO_Log == LOW)
+                    chart1.Series["Respiration"].Points[chart1.Series["Respiration"].Points.Count()-1].Color = Color.Green;
 
-                if (plotPoints < NUM_OF_POINTS)     // keep specified amount of point in graph
+                System.Windows.Forms.DataVisualization.Charting.Axis y = new System.Windows.Forms.DataVisualization.Charting.Axis();
+                //y.Minimum = zG - 300;
+                //y.Maximum = zG + 300;
+                y.Minimum = zGlist.First();
+                y.Maximum = zGlist.Last() + 1;
+                
+                chart1.ChartAreas[0].AxisY = y;
+
+                if (chart1.Series["Respiration"].Points.Count() >= NUM_OF_POINTS)  // keep specified amount of point in graph, FIFO
                 {
-                    plotPoints++;
-                }
-                else
-                {
-                    chart1.Series["Respiration"].Points.RemoveAt(0);
+                    zGlist.Remove((short)chart1.Series["Respiration"].Points.First().YValues[0]);
+                    chart1.Series["Respiration"].Points.RemoveAt(0);                // Remove the oldest measured item
+                    chart1.Series["Vaccum"].Points.RemoveAt(0);                     // Remove the oldest measured item
+                    
+                    chart1.ResetAutoValues();
+                    chart1.ChartAreas[0].RecalculateAxesScale();
                 }
             }
-            
-            // cartesianChart1.Series.Clear();
-            //values.Add(zValueAnalogAverage);
-
-            //series.Add(new LiveCharts.Wpf.LineSeries() { Title = "Acc", Values = new ChartValues<short>(values) });
-            //series.Insert(index++, Values = new ChartValues<short>(values));
-            //cartesianChart1.Series = series;
-
-            // V.Add(400);
-
-            //List<short> l = new List<short> { 400 };
-            //variable.Values.Add(l);
-
-            //cartesianChart1.Series.Insert(0, variable);
         }
-        
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            zRange = 25;
+            zRangePrev = 25;
+        }
+
         private void timer2_Tick(object sender, EventArgs e)
         {
+            zIO_Log = LOW;
             InHale();
         }
-
     }
 }
