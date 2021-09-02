@@ -34,6 +34,11 @@ namespace MeasurmentComputingAcc
             System.Windows.Forms.DataVisualization.Charting.Legend legend1 = new System.Windows.Forms.DataVisualization.Charting.Legend();
             System.Windows.Forms.DataVisualization.Charting.Series series1 = new System.Windows.Forms.DataVisualization.Charting.Series();
             System.Windows.Forms.DataVisualization.Charting.Series series2 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.ChartArea chartArea2 = new System.Windows.Forms.DataVisualization.Charting.ChartArea();
+            System.Windows.Forms.DataVisualization.Charting.Legend legend2 = new System.Windows.Forms.DataVisualization.Charting.Legend();
+            System.Windows.Forms.DataVisualization.Charting.Series series3 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series4 = new System.Windows.Forms.DataVisualization.Charting.Series();
+            System.Windows.Forms.DataVisualization.Charting.Series series5 = new System.Windows.Forms.DataVisualization.Charting.Series();
             this.button1 = new System.Windows.Forms.Button();
             this.xValue = new System.Windows.Forms.Label();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
@@ -76,16 +81,19 @@ namespace MeasurmentComputingAcc
             this.chbConst = new System.Windows.Forms.CheckBox();
             this.label9 = new System.Windows.Forms.Label();
             this.txtDelta = new System.Windows.Forms.TextBox();
+            this.chart2 = new System.Windows.Forms.DataVisualization.Charting.Chart();
+            this.rstGraph = new System.Windows.Forms.Button();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
             this.groupBox5.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.chart1)).BeginInit();
             this.groupBox4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.chart2)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(123, 23);
+            this.button1.Location = new System.Drawing.Point(123, 9);
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(104, 23);
             this.button1.TabIndex = 0;
@@ -242,7 +250,7 @@ namespace MeasurmentComputingAcc
             // 
             // status
             // 
-            this.status.Location = new System.Drawing.Point(12, 60);
+            this.status.Location = new System.Drawing.Point(12, 46);
             this.status.Name = "status";
             this.status.Size = new System.Drawing.Size(95, 240);
             this.status.TabIndex = 18;
@@ -255,7 +263,7 @@ namespace MeasurmentComputingAcc
             this.groupBox1.Controls.Add(this.txtMiddle);
             this.groupBox1.Controls.Add(this.txtRange);
             this.groupBox1.Controls.Add(this.label5);
-            this.groupBox1.Location = new System.Drawing.Point(123, 214);
+            this.groupBox1.Location = new System.Drawing.Point(123, 200);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Size = new System.Drawing.Size(297, 96);
             this.groupBox1.TabIndex = 21;
@@ -287,7 +295,7 @@ namespace MeasurmentComputingAcc
             this.groupBox2.Controls.Add(this.label6);
             this.groupBox2.Controls.Add(this.txtActualRange);
             this.groupBox2.Controls.Add(this.label8);
-            this.groupBox2.Location = new System.Drawing.Point(458, 81);
+            this.groupBox2.Location = new System.Drawing.Point(458, 67);
             this.groupBox2.Name = "groupBox2";
             this.groupBox2.Size = new System.Drawing.Size(356, 213);
             this.groupBox2.TabIndex = 22;
@@ -378,7 +386,7 @@ namespace MeasurmentComputingAcc
             this.groupBox5.Controls.Add(this.label3);
             this.groupBox5.Controls.Add(this.yValue);
             this.groupBox5.Controls.Add(this.zValue);
-            this.groupBox5.Location = new System.Drawing.Point(123, 60);
+            this.groupBox5.Location = new System.Drawing.Point(123, 46);
             this.groupBox5.Name = "groupBox5";
             this.groupBox5.Size = new System.Drawing.Size(297, 135);
             this.groupBox5.TabIndex = 26;
@@ -387,7 +395,7 @@ namespace MeasurmentComputingAcc
             // 
             // txtBreath
             // 
-            this.txtBreath.Location = new System.Drawing.Point(12, 26);
+            this.txtBreath.Location = new System.Drawing.Point(12, 12);
             this.txtBreath.Name = "txtBreath";
             this.txtBreath.Size = new System.Drawing.Size(95, 20);
             this.txtBreath.TabIndex = 27;
@@ -400,7 +408,7 @@ namespace MeasurmentComputingAcc
             // label13
             // 
             this.label13.AutoSize = true;
-            this.label13.Location = new System.Drawing.Point(132, 331);
+            this.label13.Location = new System.Drawing.Point(808, -2);
             this.label13.Name = "label13";
             this.label13.Size = new System.Drawing.Size(108, 13);
             this.label13.TabIndex = 26;
@@ -408,7 +416,7 @@ namespace MeasurmentComputingAcc
             // 
             // txtEarlyPump
             // 
-            this.txtEarlyPump.Location = new System.Drawing.Point(135, 347);
+            this.txtEarlyPump.Location = new System.Drawing.Point(811, 14);
             this.txtEarlyPump.Name = "txtEarlyPump";
             this.txtEarlyPump.Size = new System.Drawing.Size(100, 20);
             this.txtEarlyPump.TabIndex = 25;
@@ -421,7 +429,7 @@ namespace MeasurmentComputingAcc
             this.chart1.ChartAreas.Add(chartArea1);
             legend1.Name = "Legend1";
             this.chart1.Legends.Add(legend1);
-            this.chart1.Location = new System.Drawing.Point(12, 391);
+            this.chart1.Location = new System.Drawing.Point(12, 302);
             this.chart1.Name = "chart1";
             series1.ChartArea = "ChartArea1";
             series1.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Spline;
@@ -441,7 +449,7 @@ namespace MeasurmentComputingAcc
             // 
             // pauseGraph
             // 
-            this.pauseGraph.Location = new System.Drawing.Point(71, 577);
+            this.pauseGraph.Location = new System.Drawing.Point(72, 488);
             this.pauseGraph.Name = "pauseGraph";
             this.pauseGraph.Size = new System.Drawing.Size(117, 23);
             this.pauseGraph.TabIndex = 30;
@@ -451,7 +459,7 @@ namespace MeasurmentComputingAcc
             // 
             // enValve
             // 
-            this.enValve.Location = new System.Drawing.Point(233, 23);
+            this.enValve.Location = new System.Drawing.Point(233, 9);
             this.enValve.Name = "enValve";
             this.enValve.Size = new System.Drawing.Size(137, 23);
             this.enValve.TabIndex = 31;
@@ -464,7 +472,7 @@ namespace MeasurmentComputingAcc
             this.groupBox4.Controls.Add(this.chbConst);
             this.groupBox4.Controls.Add(this.label9);
             this.groupBox4.Controls.Add(this.txtDelta);
-            this.groupBox4.Location = new System.Drawing.Point(458, 12);
+            this.groupBox4.Location = new System.Drawing.Point(458, -2);
             this.groupBox4.Name = "groupBox4";
             this.groupBox4.Size = new System.Drawing.Size(291, 63);
             this.groupBox4.TabIndex = 26;
@@ -501,11 +509,51 @@ namespace MeasurmentComputingAcc
             this.txtDelta.TabIndex = 19;
             this.txtDelta.Text = "5";
             // 
+            // chart2
+            // 
+            chartArea2.Name = "ChartArea1";
+            this.chart2.ChartAreas.Add(chartArea2);
+            legend2.Name = "Legend1";
+            this.chart2.Legends.Add(legend2);
+            this.chart2.Location = new System.Drawing.Point(12, 517);
+            this.chart2.Name = "chart2";
+            series3.ChartArea = "ChartArea1";
+            series3.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Spline;
+            series3.Legend = "Legend1";
+            series3.Name = "Xvalues";
+            series4.ChartArea = "ChartArea1";
+            series4.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Spline;
+            series4.Legend = "Legend1";
+            series4.MarkerColor = System.Drawing.Color.White;
+            series4.Name = "Yvalues";
+            series5.ChartArea = "ChartArea1";
+            series5.ChartType = System.Windows.Forms.DataVisualization.Charting.SeriesChartType.Spline;
+            series5.Legend = "Legend1";
+            series5.Name = "Vvalues";
+            this.chart2.Series.Add(series3);
+            this.chart2.Series.Add(series4);
+            this.chart2.Series.Add(series5);
+            this.chart2.Size = new System.Drawing.Size(979, 213);
+            this.chart2.TabIndex = 32;
+            this.chart2.Text = "chart2";
+            // 
+            // rstGraph
+            // 
+            this.rstGraph.Location = new System.Drawing.Point(215, 488);
+            this.rstGraph.Name = "rstGraph";
+            this.rstGraph.Size = new System.Drawing.Size(75, 23);
+            this.rstGraph.TabIndex = 33;
+            this.rstGraph.Text = "Reset Graph";
+            this.rstGraph.UseVisualStyleBackColor = true;
+            this.rstGraph.Click += new System.EventHandler(this.rstGraph_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1071, 629);
+            this.ClientSize = new System.Drawing.Size(1071, 742);
+            this.Controls.Add(this.rstGraph);
+            this.Controls.Add(this.chart2);
             this.Controls.Add(this.groupBox4);
             this.Controls.Add(this.enValve);
             this.Controls.Add(this.pauseGraph);
@@ -530,6 +578,7 @@ namespace MeasurmentComputingAcc
             ((System.ComponentModel.ISupportInitialize)(this.chart1)).EndInit();
             this.groupBox4.ResumeLayout(false);
             this.groupBox4.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.chart2)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -579,6 +628,8 @@ namespace MeasurmentComputingAcc
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.TextBox txtDelta;
         private System.Windows.Forms.Button button2;
+        private System.Windows.Forms.DataVisualization.Charting.Chart chart2;
+        private System.Windows.Forms.Button rstGraph;
     }
 }
 
